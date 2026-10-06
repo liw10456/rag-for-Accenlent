@@ -1,0 +1,16 @@
+{"question": "How much does the Team plan cost?", "relevant_source": "nimbus_billing.md", "answer_contains": "49"}
+{"question": "Can I get my money back on a monthly subscription?", "relevant_source": "nimbus_billing.md", "answer_contains": "not refundable"}
+{"question": "What happens if my credit card is declined?", "relevant_source": "nimbus_billing.md", "answer_contains": "read-only"}
+{"question": "When are invoices sent?", "relevant_source": "nimbus_billing.md", "answer_contains": "first business day"}
+{"question": "What does NB-429 mean?", "relevant_source": "nimbus_errors.md", "answer_contains": "600"}
+{"question": "My API token stopped working, why?", "relevant_source": "nimbus_errors.md", "answer_contains": "90 days"}
+{"question": "I ran out of disk space and writes are failing", "relevant_source": "nimbus_errors.md", "answer_contains": "quota"}
+{"question": "What should I do when a region is down?", "relevant_source": "nimbus_errors.md", "answer_contains": "fail over"}
+{"question": "How do I revert to a previous release?", "relevant_source": "nimbus_deploy.md", "answer_contains": "rollback"}
+{"question": "Where should I keep secrets like database passwords?", "relevant_source": "nimbus_deploy.md", "answer_contains": "environment variables"}
+{"question": "How often are health checks performed?", "relevant_source": "nimbus_deploy.md", "answer_contains": "10 seconds"}
+{"question": "Does pushing to git deploy automatically?", "relevant_source": "nimbus_deploy.md", "answer_contains": "push"}
+{"question": "Who is allowed to delete a project?", "relevant_source": "nimbus_security.md", "answer_contains": "Admin"}
+{"question": "Can I store patient health records on Nimbus?", "relevant_source": "nimbus_security.md", "answer_contains": "Business Associate"}
+{"question": "How long are backups kept?", "relevant_source": "nimbus_security.md", "answer_contains": "14 days"}
+{"question": "Is SSO supported?", "relevant_source": "nimbus_security.md", "answer_contains": "SAML"}
