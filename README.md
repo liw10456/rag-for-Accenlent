@@ -4,19 +4,66 @@
 ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-**A retrieval-augmented generation (RAG) system built from first principles, and used as a private, local research library for papers, technical reports and architecture docs.**
+**A private, local research library for [Accenlent](https://accenlent.com), built as a retrieval-augmented generation (RAG) system from first principles.**
 
-No LangChain, no LlamaIndex: chunking, embeddings, vector search, BM25, hybrid fusion, reranking, grounded generation with citations, and evaluation are each implemented and measured directly, so every design choice is visible and testable. The core runs offline on numpy alone.
+Accenlent is the medical-device startup I founded, building intraoral sensing for post-stroke speech rehabilitation. Our work sits across speech-language pathology, tongue-computer interfaces, wearable sensing and embedded firmware, so the reading pile is large and scattered: conference proceedings, journal papers, technical reports, grant documents and our own architecture notes. I built this to ask that pile questions in plain English and get answers that cite **the file and page** they came from — without uploading our documents anywhere.
+
+Because it runs on unpublished company material, it is built to run **locally**: embedding, indexing and retrieval happen on my laptop, the library and its index never enter this repo, and an LLM is optional. This public repo contains the engine plus a small fictional sample corpus so anyone can run and benchmark it.
+
+No LangChain, no LlamaIndex: chunking, embeddings, vector search, BM25, hybrid fusion, reranking, grounded generation with citations, and evaluation are each implemented and measured directly. The core runs offline on numpy alone.
 
 ## Highlights
 
+- **Accenlent's research library** — one index over papers, reports and architecture docs, organized into collections (`papers/`, `reports/`, `architecture/`), with page-level citations so every answer can be checked against the source.
+- **Private by design** — local embedding and retrieval; the library and index stay off GitHub; an LLM, if enabled, only sees the top-k passages for one question.
 - **Hybrid retrieval** — dense embeddings + BM25 keyword search, fused with Reciprocal Rank Fusion, with optional cross-encoder reranking.
 - **Measured, not guessed** — a golden-set benchmark (Hit@1, Hit@3, MRR) compares 2 chunking strategies × 3 retrievers × 2 embedders. Switching to semantic embeddings took the best configuration from **0.88 → 1.00 Hit@1**.
 - **Built for real documents** — PDFs are read page by page with page-level citations; reference sections and book front matter (copyright and contents pages) are filtered out because they were measurably hijacking retrieval on real research PDFs.
-- **Private by default** — embedding and retrieval run locally; personal libraries and indexes are gitignored. An LLM is optional and only ever sees the top-k retrieved passages.
 - **Production habits** — 14 unit tests, GitHub Actions CI on Python 3.10–3.13, persisted indexes that record which embedding model built them.
 
-## Demo
+## How Accenlent uses it
+
+```
+~/Accenlent-library/          # on my laptop only — never committed
+├── papers/                   # tongue-computer interfaces, intraoral sensing, dysarthria assessment
+├── reports/                  # technical reports, grant documents, reviewer feedback
+└── architecture/             # our system, firmware and hardware notes
+```
+
+```bash
+python cli.py index --data ~/Accenlent-library --index ~/.accenlent-index --embedder st
+
+# literature review across studies: at most 2 passages per paper so several get compared
+python cli.py ask "Which sensors and sampling rates have tongue-interface studies used?" \
+    --index ~/.accenlent-index --only papers -k 8 --max-per-source 2
+
+# one paper
+python cli.py ask "Which institution are the authors affiliated with?" --index ~/.accenlent-index --file glos
+
+# our own architecture
+python cli.py ask "How does sensor data get from the mouthpiece to the app?" --index ~/.accenlent-index --only architecture
+```
+
+Typical questions: what outcome measures do dysarthria studies report; how have other groups placed and sampled intraoral sensors; what did reviewers ask for last time; which part of our firmware handles a given interface.
+
+### What the real library taught me
+
+The first version did well on the clean sample docs and then failed on Accenlent's actual PDFs, which include whole conference proceedings volumes. Both failures became fixes:
+
+| Problem found on the real library | Fix |
+|---|---|
+| A proceedings volume's **copyright page** ranked #1 for "Which institution are the authors affiliated with?" — it is full of the words *authors*, *editors*, *publisher* | Front-matter filter drops copyright and table-of-contents pages near the start of a PDF. It counts marker *lines*, so a paper's one-line "© IEEE. All rights reserved." footer doesn't get its first page — the one with the affiliations — thrown away |
+| The **table of contents** answered "which school" with paper titles that happened to contain *Middle School* | Same filter: TOC entries are detected as page numbers plus title-like word runs, while numeric data tables are kept |
+
+Built in for the same kind of corpus:
+
+- **Reference lists** are cut at the "References" heading — a bibliography matches almost any topical query.
+- **`--max-per-source`** caps passages per file, so a "compare the studies" question sees several papers rather than one paper five times.
+- **`--file` and `--only`** scope a question to one document or one collection, since "the authors" is ambiguous across a whole library.
+
+## Try it on the sample corpus
+
+The repo ships with four short docs about *Nimbus*, a fictional cloud provider, so the pipeline and benchmark run anywhere without private data.
 
 ```
 $ python cli.py ask "What happens if my credit card is declined?"
@@ -27,17 +74,7 @@ Sources:
     0.0328  nimbus_billing.md#4
 ```
 
-Point it at your own documents:
-
-```
-$ python cli.py index --data ~/library --index ~/.library-index --embedder st
-Indexed 169 chunks ... Collections: architecture, papers, reports
-
-$ python cli.py ask "Which sensors and sampling rates were used?" \
-    --index ~/.library-index --only papers -k 8 --max-per-source 2
-```
-
-## Results
+## Benchmark results
 
 16-question golden set over the sample docs (`data/sample/`, a fictional cloud provider). A retrieved chunk counts as relevant only if it contains the fact needed to answer.
 
@@ -58,18 +95,6 @@ BM25 rows are identical across embedders, as they should be — BM25 doesn't use
 - **Hybrid is not automatically better.** With a weak embedder, fusing in BM25 helped because the two retrievers made different mistakes. With a strong embedder, dense alone was perfect and equal-weight fusion *lowered* Hit@1 (1.00 → 0.94): BM25's top pick for "Who is allowed to delete a project?" leaked through RRF. Next step: weighted fusion or a reranker as the final judge.
 - **Chunking interacts with the embedder.** Structure-aware paragraph chunks gave the semantic model clean single-topic passages; fixed windows mixed sections and pushed one answer down to rank 7.
 - **Small eval sets mislead in both directions.** One question is 6 points of Hit@1 here. A perfect score means the set is too small and easy, not that the system is finished — a larger set with paraphrased, multi-hop and unanswerable questions is on the roadmap.
-
-## Real-world use: a private research library
-
-I use the same pipeline on a local library of assistive-technology research papers and technical reports. Real PDFs surfaced problems the clean sample docs never did:
-
-| Problem found on real PDFs | Fix |
-|---|---|
-| A proceedings volume's **copyright page** ranked #1 for "Which institution are the authors affiliated with?" — it is full of the words *authors*, *editors*, *publisher* | Front-matter filter: drops copyright and table-of-contents pages near the start of a PDF. It counts marker *lines*, so a paper's one-line "© IEEE. All rights reserved." footer doesn't get its first page (the one with the affiliations) thrown away |
-| The **table of contents** matched "which school" through paper titles containing *Middle School* | Same filter: TOC entries are detected as page numbers plus title-like word runs, while numeric data tables are kept |
-| **Reference lists** match almost any topical query | Bibliography sections are cut at the "References" heading |
-| Cross-paper questions returned five chunks of the **same paper** | `--max-per-source` caps chunks per file so several studies get compared |
-| "The authors" is ambiguous across a library | `--file` restricts a question to one document; `--only` to one collection (subfolder) |
 
 ## Architecture
 
