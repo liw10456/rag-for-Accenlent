@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 
 from .chunking import Chunk
+from .filters import matches
 
 
 class VectorStore:
@@ -35,7 +36,7 @@ class VectorStore:
         results = []
         for i in order:
             c = self.chunks[i]
-            if where and any(c.metadata.get(key, c.source if key == "source" else None) != val for key, val in where.items()):
+            if not matches(c, where):
                 continue  # metadata filtering (e.g. per-tenant / per-permission)
             results.append((c, float(scores[i])))
             if len(results) == k:

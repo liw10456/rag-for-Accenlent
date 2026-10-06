@@ -114,3 +114,39 @@ def test_max_per_source_diversifies():
     rag.ingest_dir(DATA)
     hits = rag.retrieve("error codes plans billing", k=4, max_per_source=1)
     assert len({c.source for c, _ in hits}) == len(hits)
+
+
+def test_front_matter_detection():
+    from rag.loaders import is_front_matter
+
+    copyright_page = "\n".join([
+        "ISSN 0302-9743 ISSN 1611-3349 (electronic)",
+        "ISBN 978-3-030-58795-6 ISBN 978-3-030-58796-3 (eBook)",
+        "(c) Springer Nature Switzerland AG 2020",
+        "This work is subject to copyright. All rights are reserved by the Publisher.",
+        "Neither the publisher nor the authors or the editors give a warranty.",
+    ]).replace("(c)", "©")
+    toc_page = "\n".join(["Contents"] + [
+        f"{100 + 9 * i} Jane Doe and John Roe Tongue Interfaces for Assistive Devices Study {i}" for i in range(8)
+    ])
+    first_page = "\n".join([
+        "GLOS: GLOve for Speech Recognition",
+        "A. Author, Department of Electrical Engineering, Example University",
+        "Abstract - We present a wearable glove that recognizes speech gestures.",
+        "I. Introduction",
+        "Speech impairments affect millions of people worldwide.",
+        "© Copyright 2024 IEEE - All rights reserved.",
+    ])
+    table_page = "\n".join(["Table 2. Results"] + [f"{i} 200 Hz 0.{i}3 ms" for i in range(1, 9)])
+    assert is_front_matter(copyright_page, 4)
+    assert is_front_matter(toc_page, 12)
+    assert not is_front_matter(first_page, 1)
+    assert not is_front_matter(table_page, 5)
+    assert not is_front_matter(copyright_page, 120)  # deep in a book: not front matter
+
+
+def test_file_filter_substring():
+    rag = RAG(embedder="hashing")
+    rag.ingest_dir(DATA)
+    hits = rag.retrieve("what does it cost", k=3, where={"file": "BILLING"})
+    assert hits and all(c.source == "nimbus_billing.md" for c, _ in hits)

@@ -12,6 +12,7 @@ from collections import Counter
 
 from .chunking import Chunk
 from .embeddings import tokenize
+from .filters import matches
 
 STOPWORDS = set(
     "a an the of to in on for and or is are was were be by with as at it this that from "
@@ -39,8 +40,7 @@ class BM25:
         scores = []
         for i, doc in enumerate(self.docs):
             s = 0.0
-            c = self.chunks[i]
-            if where and any(c.metadata.get(key, c.source if key == "source" else None) != val for key, val in where.items()):
+            if not matches(self.chunks[i], where):
                 scores.append(0.0)
                 continue
             for t in q:

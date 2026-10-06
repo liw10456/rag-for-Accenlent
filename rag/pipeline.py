@@ -38,9 +38,9 @@ class RAG:
             c.id = f"{source}:p{page}#{i}" if page else f"{source}#{i}"
         return chunks
 
-    def ingest_dir(self, folder: str | Path, keep_references: bool = False) -> int:
+    def ingest_dir(self, folder: str | Path, keep_references: bool = False, keep_front_matter: bool = False) -> int:
         chunks: list[Chunk] = []
-        for doc in load_folder(folder, keep_references=keep_references):
+        for doc in load_folder(folder, keep_references=keep_references, keep_front_matter=keep_front_matter):
             chunks += self.chunk(doc.text, doc.source, doc.metadata)
         if not chunks:
             raise ValueError(f"No readable .md / .txt / .pdf content found in {folder}")

@@ -57,13 +57,17 @@ def _llm(prompt: str) -> str | None:
 
 
 def _extractive(question: str, contexts: list[Chunk], n: int = 2) -> str:
-    q = set(tokenize(question))
+    """No-LLM fallback: pick the sentences sharing the most content words with the
+    question, with a small bonus for higher-ranked sources."""
+    from .bm25 import STOPWORDS
+
+    q = set(tokenize(question)) - STOPWORDS
     scored = []
     for i, c in enumerate(contexts, start=1):
         for sent in re.split(r"(?<=[.!?])\s+", c.text):
             overlap = len(q & set(tokenize(sent)))
             if overlap:
-                scored.append((overlap, sent.strip(), i))
+                scored.append((overlap + 0.5 / i, sent.strip(), i))
     if not scored:
         return "I don't know based on the provided documents."
     scored.sort(key=lambda x: -x[0])
