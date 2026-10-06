@@ -27,7 +27,10 @@ class VectorStore:
     def search(self, query_vec: np.ndarray, k: int = 5, where: dict | None = None) -> list[tuple[Chunk, float]]:
         if self.vectors is None:
             return []
-        scores = self.vectors @ query_vec  # vectors are L2-normalized -> dot = cosine
+        # vectors are L2-normalized -> dot = cosine. errstate silences spurious FP warnings
+        # that numpy + Apple Accelerate BLAS can raise on macOS; the results are unaffected.
+        with np.errstate(all="ignore"):
+            scores = self.vectors @ query_vec
         order = np.argsort(-scores)
         results = []
         for i in order:
