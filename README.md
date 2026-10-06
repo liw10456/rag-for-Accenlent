@@ -4,11 +4,9 @@
 ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-**A private, local research library for [Accenlent](https://accenlent.com), built as a retrieval-augmented generation (RAG) system from first principles.**
+**A local research library for [Accenlent](https://accenlent.com), built as a retrieval-augmented generation (RAG) system from first principles.**
 
-Accenlent is the medical-device startup I founded, building intraoral sensing for post-stroke speech rehabilitation. Our work sits across speech-language pathology, tongue-computer interfaces, wearable sensing and embedded firmware, so the reading pile is large and scattered: conference proceedings, journal papers, technical reports, grant documents and our own architecture notes. I built this to ask that pile questions in plain English and get answers that cite **the file and page** they came from — without uploading our documents anywhere.
-
-Because it runs on unpublished company material, it is built to run **locally**: embedding, indexing and retrieval happen on my laptop, the library and its index never enter this repo, and an LLM is optional. This public repo contains the engine plus a small fictional sample corpus so anyone can run and benchmark it.
+Accenlent is the medical-device startup, building intraoral sensing for post-stroke speech rehabilitation. Our work sits across speech-language pathology, tongue-computer interfaces, wearable sensing and embedded firmware, so the reading pile is large and scattered: conference proceedings, journal papers, technical reports, grant documents and our own architecture notes. I built this to ask that pile questions in plain English and get answers that cite **the file and page** they came from — without uploading our documents anywhere.
 
 No LangChain, no LlamaIndex: chunking, embeddings, vector search, BM25, hybrid fusion, reranking, grounded generation with citations, and evaluation are each implemented and measured directly. The core runs offline on numpy alone.
 
