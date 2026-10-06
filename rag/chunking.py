@@ -66,7 +66,19 @@ def paragraph_chunks(text: str, source: str, max_words: int = 250) -> list[Chunk
             continue
         if not buf:
             buf_heading = heading
-        if sum(len(b.split()) for b in buf) + len(block.split()) > max_words:
+        words = block.split()
+        if len(words) > max_words:
+            # one huge block (common in PDF text with no blank lines): window it
+            flush()
+            buf_heading = heading
+            step = max_words - max_words // 5
+            for s in range(0, len(words), step):
+                buf.append(" ".join(words[s : s + max_words]))
+                flush()
+                if s + max_words >= len(words):
+                    break
+            continue
+        if sum(len(b.split()) for b in buf) + len(words) > max_words:
             flush()
             buf_heading = heading
         buf.append(block)

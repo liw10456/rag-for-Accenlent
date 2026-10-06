@@ -58,3 +58,59 @@ def test_end_to_end():
     top = rag.retrieve("What does NB-429 mean?", k=1)[0][0]
     assert "NB-429" in top.text
     assert "[1]" in rag.ask("What does NB-429 mean?")["answer"]
+
+
+def test_save_load_roundtrip(tmp_path):
+    rag = RAG(embedder="hashing")
+    rag.ingest_dir(DATA)
+    rag.save(tmp_path / "idx")
+    loaded = RAG.load(tmp_path / "idx")
+    q = "What does NB-429 mean?"
+    assert loaded.retrieve(q, k=1)[0][0].id == rag.retrieve(q, k=1)[0][0].id
+
+
+def test_pdf_pages_are_cited(tmp_path):
+    import pytest
+
+    pytest.importorskip("pypdf")
+    canvas = pytest.importorskip("reportlab.pdfgen.canvas")
+    pdf = tmp_path / "lib" / "paper.pdf"
+    pdf.parent.mkdir()
+    c = canvas.Canvas(str(pdf))
+    c.drawString(72, 720, "Introduction to the study design.")
+    c.showPage()
+    c.drawString(72, 720, "The sensor sampling rate was 200 Hz.")
+    c.save()
+    rag = RAG(embedder="hashing")
+    rag.ingest_dir(pdf.parent)
+    top = rag.retrieve("sensor sampling rate", k=1, mode="bm25")[0][0]
+    assert top.metadata["page"] == 2 and top.id == "paper.pdf:p2#0"
+
+
+def test_long_block_is_split():
+    text = " ".join(f"w{i}" for i in range(600))  # one block, no blank lines
+    assert len(paragraph_chunks(text, "t", max_words=250)) >= 3
+
+
+def test_references_are_stripped_and_collections_filter(tmp_path):
+    lib = tmp_path / "lib"
+    (lib / "papers").mkdir(parents=True)
+    (lib / "architecture").mkdir()
+    (lib / "papers" / "a.md").write_text("# Methods\n\nWe used a 200 Hz pressure sensor.\n\nReferences\n\nSmith J. Pressure sensor arrays. 2019.")
+    (lib / "papers" / "b.md").write_text("# Methods\n\nA 100 Hz pressure sensor was placed on the palate.")
+    (lib / "architecture" / "fw.md").write_text("# Firmware\n\nThe pressure sensor is read over I2C by the MCU.")
+    rag = RAG(embedder="hashing")
+    rag.ingest_dir(lib)
+    assert rag.collections() == ["architecture", "papers"]
+    assert not any("Smith" in c.text for c in rag.store.chunks)
+    hits = rag.retrieve("pressure sensor", k=5, where={"collection": "papers"})
+    assert hits and all(c.metadata["collection"] == "papers" for c, _ in hits)
+    arch = rag.retrieve("pressure sensor", k=5, mode="bm25", where={"collection": "architecture"})
+    assert [c.source for c, _ in arch] == ["fw.md"]
+
+
+def test_max_per_source_diversifies():
+    rag = RAG(embedder="hashing")
+    rag.ingest_dir(DATA)
+    hits = rag.retrieve("error codes plans billing", k=4, max_per_source=1)
+    assert len({c.source for c, _ in hits}) == len(hits)

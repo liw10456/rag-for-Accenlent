@@ -4,4 +4,8 @@ __pycache__/
 .venv/
 venv/
 .env
+
+# Private libraries and their indexes never go to GitHub
+library/
+.index/
 index/

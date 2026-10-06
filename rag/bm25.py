@@ -34,11 +34,15 @@ class BM25:
         n = len(self.docs)
         self.idf = {t: math.log(1 + (n - f + 0.5) / (f + 0.5)) for t, f in df.items()}
 
-    def search(self, query: str, k: int = 5) -> list[tuple[Chunk, float]]:
+    def search(self, query: str, k: int = 5, where: dict | None = None) -> list[tuple[Chunk, float]]:
         q = _terms(query)
         scores = []
         for i, doc in enumerate(self.docs):
             s = 0.0
+            c = self.chunks[i]
+            if where and any(c.metadata.get(key, c.source if key == "source" else None) != val for key, val in where.items()):
+                scores.append(0.0)
+                continue
             for t in q:
                 tf = doc.get(t, 0)
                 if tf:
